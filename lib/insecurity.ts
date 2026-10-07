@@ -43,6 +43,20 @@ interface IAuthenticatedUsers {
 export const hash = (data: string) => crypto.createHash('md5').update(data).digest('hex')
 export const hmac = (data: string) => crypto.createHmac('sha256', 'pa4qacea4VK9t9nGv7yZtwmj').update(data).digest('hex')
 
+export const hashPassword = (password: string) => {
+  const salt = crypto.randomBytes(16).toString('hex')
+  return `scrypt$${salt}$${crypto.scryptSync(password, salt, 32).toString('hex')}`
+}
+
+export const verifyPassword = (password: unknown, storedHash: unknown) => {
+  if (typeof password !== 'string' || typeof storedHash !== 'string') return false
+  const [algorithm, salt, hash] = storedHash.split('$')
+  if (algorithm !== 'scrypt' || !salt || !hash) return false
+  const expected = Buffer.from(hash, 'hex')
+  if (expected.length !== 32) return false
+  return crypto.timingSafeEqual(crypto.scryptSync(password, salt, expected.length), expected)
+}
+
 export const cutOffPoisonNullByte = (str: string) => {
   const nullByte = '%00'
   if (utils.contains(str, nullByte)) {
