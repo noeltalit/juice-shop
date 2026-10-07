@@ -156,10 +156,6 @@ const routes: Routes = [
     loadChildren: async () => await loadWeb3WalletModule()
   },
   {
-    path: 'web3-sandbox',
-    loadChildren: async () => await loadWeb3SandboxModule()
-  },
-  {
     path: 'chatbot',
     component: ChatbotComponent,
     children: [

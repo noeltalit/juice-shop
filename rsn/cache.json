@@ -1327,18 +1327,28 @@
 		"removed": []
 	},
 	"web3SandboxChallenge_1_correct.ts": {
-		"added": [
-			166
-		],
+		"added": [],
 		"removed": []
 	},
 	"web3SandboxChallenge_2.ts": {
 		"added": [],
-		"removed": []
+		"removed": [
+			163,
+			164,
+			165,
+			166,
+			167
+		]
 	},
 	"web3SandboxChallenge_3.ts": {
 		"added": [],
-		"removed": []
+		"removed": [
+			163,
+			164,
+			165,
+			166,
+			167
+		]
 	},
 	"web3WalletChallenge_1.sol": {
 		"added": [],
