@@ -64,15 +64,14 @@ void describe('/submitKey', { skip: skipReason }, () => {
     assert.equal(res.body.message, 'Looks like you entered the public address of my ethereum wallet!')
   })
 
-  void it('POST private key in request body gets accepted', async () => {
+  void it('POST formerly leaked private key in request body gets rejected', async () => {
     const res = await request(app)
       .post('/rest/web3/submitKey')
       .send({ privateKey: '0x5bcc3e9d38baa06e7bfaab80ae5957bbe8ef059e640311d7d6d465e6bc948e3e' })
 
-    assert.equal(res.status, 200)
+    assert.equal(res.status, 401)
     assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(res.body.success, true)
-    assert.equal(res.body.message, 'Challenge successfully solved')
+    assert.equal(res.body.success, false)
   })
 })
 
