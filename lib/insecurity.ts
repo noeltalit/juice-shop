@@ -207,6 +207,29 @@ export const appendUserId = () => {
   }
 }
 
+/* Refuses requests without a valid session token of a logged-in user with a regular JSON 401 */
+export const requireLoggedInUser = () => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const token = utils.jwtFrom(req)
+    let loggedIn = false
+    try {
+      // Only accept tokens signed by the shop itself (RS256), never unsigned or HMAC-signed ones
+      if (token && jws.decode(token)?.header?.alg === 'RS256') {
+        jwt.verify(token, publicKey, (err: Error | null, decoded: any) => {
+          loggedIn = err === null && !!decoded?.data
+        })
+      }
+    } catch {
+      loggedIn = false
+    }
+    if (loggedIn) {
+      next()
+    } else {
+      res.status(401).json({ status: 'error', message: 'You need to be logged in to use this feature.' })
+    }
+  }
+}
+
 export const updateAuthenticatedUsers = () => (req: Request, res: Response, next: NextFunction) => {
   const token = req.cookies.token || utils.jwtFrom(req)
   if (token) {

@@ -7,6 +7,7 @@ import { describe, it, before } from 'node:test'
 import assert from 'node:assert/strict'
 import request from 'supertest'
 import type { Express } from 'express'
+import * as security from '../../lib/insecurity'
 import { createTestApp } from './helpers/setup'
 
 let app: Express
@@ -123,36 +124,48 @@ void describe('/walletNFTVerify', { skip: skipReason }, () => {
 })
 
 void describe('/walletExploitAddress', { skip: skipReason }, () => {
+  const authHeader = () => ({ Authorization: `Bearer ${security.authorize({ data: { id: 1, email: 'customer@juice-sh.op' } })}` })
+
+  void it('POST without being logged in is rejected', async () => {
+    const res = await request(app)
+      .post('/rest/web3/walletExploitAddress')
+      .send({ walletAddress: '0x1234567890123456789012345678901234567890' })
+
+    assert.equal(res.status, 401)
+    assert.ok(res.headers['content-type']?.includes('application/json'))
+    assert.equal(res.body.status, 'error')
+  })
+
   void it('POST missing wallet address in request body is rejected', async () => {
     const res = await request(app)
       .post('/rest/web3/walletExploitAddress')
+      .set(authHeader())
       .send({})
 
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(res.body.success, true)
-    assert.equal(res.body.message, 'Event Listener Created')
+    assert.equal(res.body.success, false)
   })
 
   void it('POST invalid wallet address in request body is rejected', async () => {
     const res = await request(app)
       .post('/rest/web3/walletExploitAddress')
+      .set(authHeader())
       .send({ walletAddress: 'lalalalala' })
 
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(res.body.success, true)
-    assert.equal(res.body.message, 'Event Listener Created')
+    assert.equal(res.body.success, false)
   })
 
   void it('POST self-referential address in request body is rejected', async () => {
     const res = await request(app)
       .post('/rest/web3/walletExploitAddress')
+      .set(authHeader())
       .send({ walletAddress: '0x413744D59d31AFDC2889aeE602636177805Bd7b0' })
 
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(res.body.success, true)
-    assert.equal(res.body.message, 'Event Listener Created')
+    assert.equal(res.body.success, false)
   })
 })
