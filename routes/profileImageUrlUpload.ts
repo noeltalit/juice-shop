@@ -9,8 +9,10 @@ import dns from 'node:dns'
 import net from 'node:net'
 import http from 'node:http'
 import https from 'node:https'
+import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { type Request, type Response, type NextFunction } from 'express'
+import config from 'config'
 
 import * as security from '../lib/insecurity'
 import { UserModel } from '../models/user'
@@ -20,7 +22,8 @@ import logger from '../lib/logger'
 export function profileImageUrlUpload () {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (req.body.imageUrl !== undefined) {
-      const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
+      // The session token may come from the cookie (web UI) or the Authorization header (API clients)
+      const loggedInUser = security.authenticatedUsers.get(req.cookies.token) ?? security.authenticatedUsers.from(req)
       if (loggedInUser) {
         const url = parseHttpUrl(req.body.imageUrl)
         let profileImage: string | undefined
@@ -28,17 +31,17 @@ export function profileImageUrlUpload () {
         if (localImage !== null) {
           // The shop's own public images are copied from disk instead of being requested over the network
           profileImage = await copyLocalImage(localImage, loggedInUser.data.id)
-        } else if (url !== null && !isInternalHost(url)) { // Never let the server request (or link to) loopback, private or link-local hosts
+        } else if (url === null || isInternalHost(url)) {
+          // Never request (or link to) anything but plain public http(s) image links
+          logger.warn(`Refused user profile image URL: ${String(req.body.imageUrl).substring(0, 200)}`)
+        } else if (!isAllowListedHost(url)) {
+          // OWASP SSRF Prevention (case 1): the server only ever talks to identified, trusted image hosts.
+          // Any other public link is kept as a plain link that the user's browser loads, never fetched by the server.
+          profileImage = url.href
+        } else {
           profileImage = url.href
           try {
-            const response = await downloadImage(url)
-            if (response.statusCode !== 200 || !String(response.headers['content-type'] ?? '').toLowerCase().startsWith('image/')) {
-              response.resume()
-              throw new Error('url did not return an image')
-            }
-            const ext = imageExtension(url.pathname)
-            await pipeline(response, fs.createWriteStream(`${uploadsDir}/${loggedInUser.data.id}.${ext}`, { flags: 'w' }))
-            profileImage = `/assets/public/images/uploads/${loggedInUser.data.id}.${ext}`
+            profileImage = await storeDownloadedImage(url, loggedInUser.data.id)
           } catch (error) {
             if ((error as NodeJS.ErrnoException).code === 'EBLOCKED') {
               profileImage = undefined
@@ -47,8 +50,6 @@ export function profileImageUrlUpload () {
               logger.warn(`Error retrieving user profile image: ${utils.getErrorMessage(error)}; using image link directly`)
             }
           }
-        } else if (url !== null) {
-          logger.warn(`Refused user profile image from an internal address: ${url.hostname}`)
         }
         if (profileImage !== undefined) {
           try {
@@ -69,14 +70,51 @@ export function profileImageUrlUpload () {
   }
 }
 
+// Trusted image hosts (exact host or a subdomain of it), e.g. application.profileImageUrlAllowlist: [cataas.com]
+function allowList () {
+  const hosts = config.has('application.profileImageUrlAllowlist') ? config.get<unknown>('application.profileImageUrlAllowlist') : []
+  return Array.isArray(hosts) ? hosts.filter((host): host is string => typeof host === 'string' && host.trim() !== '').map(host => host.trim().toLowerCase().replace(/^\.+|\.+$/g, '')) : []
+}
+
+function isAllowListedHost (url: URL) {
+  const host = url.hostname.toLowerCase().replace(/\.$/, '')
+  if (net.isIP(host.replace(/^\[|\]$/g, '')) !== 0) return false // only named, trusted hosts; never raw IP addresses
+  if (url.port !== '') return false // only the scheme's default port, never a user-chosen one
+  if (url.username !== '' || url.password !== '') return false
+  return allowList().some(allowed => host === allowed || host.endsWith('.' + allowed))
+}
+
+const maxImageBytes = 5 * 1024 * 1024
+
+async function storeDownloadedImage (url: URL, userId: number) {
+  const response = await downloadImage(url)
+  const contentType = String(response.headers['content-type'] ?? '').toLowerCase()
+  const contentLength = Number(response.headers['content-length'] ?? 0)
+  if (response.statusCode !== 200 || !/^image\/(png|jpe?g|gif)(;|$)/.test(contentType) || contentLength > maxImageBytes) {
+    response.resume()
+    throw new Error('url did not return an image') // redirects (3xx) are never followed
+  }
+  const ext = contentType.includes('png') ? 'png' : contentType.includes('gif') ? 'gif' : 'jpg'
+  let received = 0
+  const limit = new Transform({
+    transform (chunk: Buffer, _encoding, callback) {
+      received += chunk.length
+      callback(received > maxImageBytes ? new Error('image is too large') : null, chunk)
+    }
+  })
+  const file = `${uploadsDir}/${userId}.${ext}`
+  try {
+    await pipeline(response, limit, fs.createWriteStream(file, { flags: 'w' }))
+  } catch (error) {
+    await fs.promises.rm(file, { force: true })
+    throw error
+  }
+  return `/assets/public/images/uploads/${userId}.${ext}`
+}
+
 const publicImagesDir = path.resolve('frontend/dist/frontend/assets/public/images')
 const uploadsDir = 'frontend/dist/frontend/assets/public/images/uploads'
 const imageExtensions = ['jpg', 'jpeg', 'png', 'svg', 'gif']
-
-function imageExtension (pathname: string) {
-  const lastSegment = pathname.split('.').slice(-1)[0].toLowerCase()
-  return imageExtensions.includes(lastSegment) ? lastSegment : 'jpg'
-}
 
 // Links without a scheme (e.g. "cataas.com/cat") are taken as https:// links, then validated like any other URL
 function parseHttpUrl (value: unknown) {
