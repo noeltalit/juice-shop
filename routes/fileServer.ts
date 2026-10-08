@@ -10,9 +10,21 @@ import * as utils from '../lib/utils'
 import { challenges } from '../data/datacache'
 import * as challengeUtils from '../lib/challengeUtils'
 
+// Internal documents that were accidentally put into the public /ftp folder
+const confidentialFiles = new Set(['acquisitions.md'])
+
+export function isConfidentialFile (file: string) {
+  return confidentialFiles.has(String(file).toLowerCase())
+}
+
 export function servePublicFiles () {
   return ({ params, query }: Request, res: Response, next: NextFunction) => {
     const file = params.file
+
+    if (isConfidentialFile(file)) {
+      res.status(403).json({ status: 'error', message: 'This document is not available.' })
+      return
+    }
 
     if (!file.includes('/')) {
       verify(file, res, next)
