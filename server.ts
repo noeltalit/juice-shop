@@ -228,7 +228,7 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   app.use(antiCheat.checkForPreSolveInteractions())
 
   /* Unreleased and developer-only pages are not part of the public shop */
-  app.use(['/assets/public/images/padding/11px.png', '/assets/public/images/padding/56px.png'], (req: Request, res: Response) => {
+  app.all(/\/(11|56)px\.png$/, (req: Request, res: Response) => {
     res.status(403).json({ status: 'error', message: 'This page is not available.' })
   })
 
