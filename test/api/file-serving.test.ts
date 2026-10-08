@@ -201,10 +201,15 @@ void describe('Hidden URL', () => {
     assert.equal(res.status, 200)
   })
 
-  void it('GET folder containing access log files for "Access Log" challenge', async () => {
+  void it('GET access log files for "Access Log" challenge is forbidden', async () => {
     const res = await request(app)
       .get('/support/logs/access.log.' + utils.toISO8601(new Date()))
-    assert.equal(res.status, 200)
-    assert.ok(res.headers['content-type']?.includes('application/octet-stream'))
+    assert.equal(res.status, 403)
+  })
+
+  void it('GET folder containing access log files is forbidden', async () => {
+    const res = await request(app)
+      .get('/support/logs')
+    assert.equal(res.status, 403)
   })
 })

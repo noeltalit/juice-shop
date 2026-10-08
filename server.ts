@@ -276,6 +276,11 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   app.use('/encryptionkeys', serveIndexMiddleware, serveIndex('encryptionkeys', { icons: true, view: 'details' }))
   app.use('/encryptionkeys/:file', serveKeyFiles())
 
+  /* Server log files are never exposed over HTTP */
+  app.use('/support/logs', (req: Request, res: Response) => {
+    res.status(403).json({ status: 'error', message: 'Access to server log files is not permitted.' })
+  })
+
   /* Swagger documentation for B2B v2 endpoints */
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
