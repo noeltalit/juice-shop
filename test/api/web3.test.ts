@@ -124,7 +124,7 @@ void describe('/walletNFTVerify', { skip: skipReason }, () => {
 })
 
 void describe('/walletExploitAddress', { skip: skipReason }, () => {
-  void it('POST missing wallet address in request body still leads to success notification', async () => {
+  void it('POST missing wallet address in request body is rejected', async () => {
     const res = await request(app)
       .post('/rest/web3/walletExploitAddress')
       .send({})
@@ -135,7 +135,7 @@ void describe('/walletExploitAddress', { skip: skipReason }, () => {
     assert.equal(res.body.message, 'Event Listener Created')
   })
 
-  void it('POST invalid wallet address in request body still leads to success notification', async () => {
+  void it('POST invalid wallet address in request body is rejected', async () => {
     const res = await request(app)
       .post('/rest/web3/walletExploitAddress')
       .send({ walletAddress: 'lalalalala' })
@@ -146,7 +146,7 @@ void describe('/walletExploitAddress', { skip: skipReason }, () => {
     assert.equal(res.body.message, 'Event Listener Created')
   })
 
-  void it('POST self-referential address in request body leads to success notification', async () => {
+  void it('POST self-referential address in request body is rejected', async () => {
     const res = await request(app)
       .post('/rest/web3/walletExploitAddress')
       .send({ walletAddress: '0x413744D59d31AFDC2889aeE602636177805Bd7b0' })
