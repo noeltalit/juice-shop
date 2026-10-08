@@ -227,6 +227,11 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   /* Check for any URLs having been called that would be expected for challenge solving without cheating */
   app.use(antiCheat.checkForPreSolveInteractions())
 
+  /* Unreleased and developer-only pages are not part of the public shop */
+  app.use(['/assets/public/images/padding/11px.png'], (req: Request, res: Response) => {
+    res.status(403).json({ status: 'error', message: 'This page is not available.' })
+  })
+
   /* Checks for challenges solved by retrieving a file implicitly or explicitly */
   app.use('/assets/public/images/padding', verify.accessControlChallenges())
   app.use('/assets/public/images/products', verify.accessControlChallenges())
