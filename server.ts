@@ -399,6 +399,13 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   app.use('/rest/basket/:id/order', security.isAuthorized())
   /* Challenge evaluation before finale takes over */ // vuln-code-snippet hide-start
   app.post('/api/Feedbacks', verify.forgedFeedbackChallenge())
+  /* Throttle feedback per client connection (not the spoofable X-Forwarded-For) against automated submission */
+  app.post('/api/Feedbacks', rateLimit({
+    windowMs: config.get<number>('application.feedbackRateLimit.windowMs'),
+    max: config.get<number>('application.feedbackRateLimit.max'),
+    keyGenerator: ({ socket }: Request) => socket.remoteAddress ?? '',
+    validate: false
+  }))
   /* Captcha verification before finale takes over */
   app.post('/api/Feedbacks', utils.asyncHandler(verifyCaptcha()))
   /* Captcha Bypass challenge verification */

@@ -28,14 +28,16 @@ export function captchas () {
     }
     const captchaInstance = CaptchaModel.build(captcha)
     await captchaInstance.save()
-    res.json(captcha)
+    res.json({ captchaId, captcha: expression })
   }
 }
 
 export const verifyCaptcha = () => async (req: Request, res: Response, next: NextFunction) => {
   try {
     const captcha = await CaptchaModel.findOne({ where: { captchaId: req.body.captchaId } })
-    if ((captcha != null) && req.body.captcha === captcha.answer) {
+    // Each CAPTCHA allows exactly one attempt, so it can be neither replayed nor brute-forced
+    const consumed = await CaptchaModel.destroy({ where: { captchaId: req.body.captchaId } }) === 1
+    if ((captcha != null) && consumed && req.body.captcha === captcha.answer) {
       next()
     } else {
       res.status(401).send(res.__('Wrong answer to CAPTCHA. Please try again.'))
