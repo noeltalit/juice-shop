@@ -7,7 +7,6 @@ import path from 'node:path'
 import { type Request, type Response, type NextFunction } from 'express'
 
 import * as utils from '../lib/utils'
-import * as security from '../lib/insecurity'
 import { challenges } from '../data/datacache'
 import * as challengeUtils from '../lib/challengeUtils'
 
@@ -24,8 +23,8 @@ export function servePublicFiles () {
   }
 
   function verify (file: string, res: Response, next: NextFunction) {
-    if (file && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx'))) {
-      file = security.cutOffPoisonNullByte(file)
+    // A null byte would make the served file differ from the name that was checked, so refuse it
+    if (file && !file.includes(String.fromCharCode(0)) && !utils.contains(file.toLowerCase(), '%00') && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx'))) {
 
       challengeUtils.solveIf(challenges.directoryListingChallenge, () => { return file.toLowerCase() === 'acquisitions.md' })
       verifySuccessfulPoisonNullByteExploit(file)

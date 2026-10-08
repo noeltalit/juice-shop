@@ -1,7 +1,5 @@
 # Use 'default' configuration during automated test execution
 application:
-  feedbackRateLimit:
-    max: 1000
   chatBot:
     llmApiUrl: 'http://localhost:43210/v1'
     llmMaxRetries: 0

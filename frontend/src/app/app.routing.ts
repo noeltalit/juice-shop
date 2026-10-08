@@ -4,7 +4,6 @@
  */
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { TokenSaleComponent } from './token-sale/token-sale.component'
 import { OAuthComponent } from './oauth/oauth.component'
 import { BasketComponent } from './basket/basket.component'
 import { TrackResultComponent } from './track-result/track-result.component'
@@ -250,10 +249,6 @@ const routes: Routes = [
     data: { params: (window.location.href).substr(window.location.href.indexOf('#')) },
     component: OAuthComponent
   },
-  { // vuln-code-snippet neutral-line tokenSaleChallenge
-    matcher: tokenMatcher, // vuln-code-snippet vuln-line tokenSaleChallenge
-    component: TokenSaleComponent // vuln-code-snippet neutral-line tokenSaleChallenge
-  }, // vuln-code-snippet neutral-line tokenSaleChallenge
   {
     path: 'coding-challenge/:challengeKey',
     loadComponent: async () => await loadCodingChallenge()
