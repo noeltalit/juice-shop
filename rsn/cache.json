@@ -728,7 +728,8 @@
 			2,
 			6,
 			7,
-			8
+			8,
+			9
 		]
 	},
 	"directoryListingChallenge_1_correct.ts": {
@@ -1251,23 +1252,44 @@
 		]
 	},
 	"restfulXssChallenge_1_correct.ts": {
-		"added": [
-			42,
-			43
-		],
+		"added": [],
 		"removed": []
 	},
 	"restfulXssChallenge_2.ts": {
 		"added": [],
-		"removed": []
+		"removed": [
+			8,
+			41,
+			42,
+			43,
+			44,
+			45,
+			46
+		]
 	},
 	"restfulXssChallenge_3.ts": {
 		"added": [],
-		"removed": []
+		"removed": [
+			8,
+			41,
+			42,
+			43,
+			44,
+			45,
+			46
+		]
 	},
 	"restfulXssChallenge_4.ts": {
 		"added": [],
-		"removed": []
+		"removed": [
+			8,
+			41,
+			42,
+			43,
+			44,
+			45,
+			46
+		]
 	},
 	"scoreBoardChallenge_1_correct.ts": {
 		"added": [],
@@ -1315,7 +1337,9 @@
 	},
 	"unionSqlInjectionChallenge_1.ts": {
 		"added": [],
-		"removed": []
+		"removed": [
+			6
+		]
 	},
 	"unionSqlInjectionChallenge_2_correct.ts": {
 		"added": [
@@ -1333,7 +1357,8 @@
 			6,
 			7,
 			8,
-			9
+			9,
+			10
 		]
 	},
 	"weakPasswordChallenge_1_correct.ts": {
