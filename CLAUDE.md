@@ -33,5 +33,6 @@ The targets live in the `redteamspace-ctf` GitHub org: `DVWA`, `juice-shop`, `Vu
 | DVWA | https://github.com/redteamspace-ctf/DVWA/pull/11 | `fix/patch-vulnerabilities` |
 | juice-shop | https://github.com/redteamspace-ctf/juice-shop/pull/12 | `claude/adoring-cori-km8k9v` |
 | VulnerableApp | https://github.com/redteamspace-ctf/VulnerableApp/pull/19 | `claude/keen-wozniak-3ilxyc` |
+| SecurityShepherd | https://github.com/redteamspace-ctf/SecurityShepherd/pull/11 | `fix/patch-vulnerabilities` |
 
 Keep pushing fixes to the same branch; that updates and re-scores the existing PR.
