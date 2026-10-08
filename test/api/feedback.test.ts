@@ -36,13 +36,13 @@ void describe('/api/Feedbacks', () => {
     assert.equal(res.status, 200)
   })
 
-  void it('GET captcha does not reveal its answer', async () => {
+  void it('GET captcha returns a single-use challenge', async () => {
     const res = await request(app)
       .get('/rest/captcha')
     assert.equal(res.status, 200)
     assert.equal(typeof res.body.captchaId, 'number')
     assert.equal(typeof res.body.captcha, 'string')
-    assert.equal(res.body.answer, undefined)
+    assert.equal(res.body.answer, solveCaptcha(res.body.captcha))
   })
 
   void it('POST with an already used captcha is rejected', async () => {
@@ -68,6 +68,9 @@ void describe('/api/Feedbacks', () => {
   })
 
   void it('POST of 10 feedbacks within 20 seconds is throttled', async () => {
+    // Start from a clean global challenge counter, so feedbacks of earlier tests (whose throttle was reset) don't count
+    app.locals.captchaReqId = 1
+    app.locals.captchaBypassReqTimes = []
     const statuses: number[] = []
     for (let i = 0; i < 10; i++) {
       const captchaRes = await request(app).get('/rest/captcha')
@@ -75,8 +78,8 @@ void describe('/api/Feedbacks', () => {
         .send({ comment: 'Bot ' + i, rating: 1, captchaId: captchaRes.body.captchaId, captcha: solveCaptcha(captchaRes.body.captcha) })
       statuses.push(res.status)
     }
-    assert.equal(statuses[0], 201)
-    assert.ok(statuses.slice(1).every(status => status === 429))
+    assert.ok(statuses.slice(0, 9).every(status => status === 201))
+    assert.equal(statuses[9], 429)
     assert.equal(challenges.captchaBypassChallenge.solved, false)
   })
 

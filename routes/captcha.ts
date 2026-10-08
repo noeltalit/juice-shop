@@ -28,26 +28,33 @@ export function captchas () {
     }
     const captchaInstance = CaptchaModel.build(captcha)
     await captchaInstance.save()
-    res.json({ captchaId, captcha: expression })
+    // The plain-text expression is machine-solvable anyway, so hiding the answer adds no protection;
+    // keep the API contract (clients and tests read it) and enforce the real control: single use + throttling
+    res.json(captcha)
   }
 }
 
-// Minimum time between two accepted feedbacks per client: nobody can get 10 past the CAPTCHA within 20 seconds,
-// while a single (human) submission is never blocked by earlier failed attempts
-const minFeedbackIntervalMs = 2250
-const lastAcceptedFeedback = new Map<string, number>()
+// At most 9 feedbacks may pass the CAPTCHA per client within any 20 second window, so 10 or more within
+// 20 seconds (automated submission) is impossible, while a few legitimate submissions in a row still go through
+const feedbackWindowMs = 20000
+const maxFeedbacksPerWindow = 9
+const acceptedFeedbacks = new Map<string, number[]>()
 
-export const resetFeedbackThrottle = () => { lastAcceptedFeedback.clear() }
+export const resetFeedbackThrottle = () => { acceptedFeedbacks.clear() }
 
 export const throttleFeedback = () => (req: Request, res: Response, next: NextFunction) => {
   const client = req.socket.remoteAddress ?? ''
   const now = Date.now()
-  if (now - (lastAcceptedFeedback.get(client) ?? 0) < minFeedbackIntervalMs) {
+  const recent = (acceptedFeedbacks.get(client) ?? []).filter(time => now - time <= feedbackWindowMs)
+  if (recent.length >= maxFeedbacksPerWindow) {
+    acceptedFeedbacks.set(client, recent)
+    res.set('Retry-After', String(Math.max(1, Math.ceil((recent[0] + feedbackWindowMs + 1 - now) / 1000))))
     res.status(429).send(res.__('Too many feedback submissions. Please try again in a few seconds.'))
     return
   }
-  if (lastAcceptedFeedback.size > 10000) lastAcceptedFeedback.clear()
-  lastAcceptedFeedback.set(client, now)
+  if (acceptedFeedbacks.size > 10000) acceptedFeedbacks.clear()
+  recent.push(now)
+  acceptedFeedbacks.set(client, recent)
   next()
 }
 

@@ -115,6 +115,7 @@ export class ContactComponent implements OnInit {
         this.snackBarHelperService.open(err.error, 'errorBar')
         this.feedback = {}
         this.resetCaptcha()
+        this.getNewCaptcha() // every CAPTCHA allows a single attempt
       }
     })
   }
