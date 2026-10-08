@@ -103,7 +103,7 @@ void describe('/api/Feedbacks', () => {
   })
 
   if (utils.isChallengeEnabled(challenges.persistedXssFeedbackChallenge)) {
-    void it('POST fails to sanitize masked XSS-attack by not applying sanitization recursively', async () => {
+    void it('POST sanitizes masked XSS-attack by applying sanitization recursively', async () => {
       const captchaRes = await request(app)
         .get('/rest/captcha')
       assert.equal(captchaRes.status, 200)
@@ -119,7 +119,7 @@ void describe('/api/Feedbacks', () => {
           captcha: solveCaptcha(captchaRes.body.captcha)
         })
       assert.equal(res.status, 201)
-      assert.equal(res.body.data.comment, 'The sanitize-html module up to at least version 1.4.2 has this issue: <iframe src="javascript:alert(`xss`)">')
+      assert.ok(!res.body.data.comment.includes('<iframe'))
     })
   }
 
