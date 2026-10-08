@@ -4,6 +4,7 @@
  */
 
 import fs from 'node:fs'
+import path from 'node:path'
 import dns from 'node:dns'
 import net from 'node:net'
 import http from 'node:http'
@@ -22,18 +23,21 @@ export function profileImageUrlUpload () {
       const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
       if (loggedInUser) {
         const url = parseHttpUrl(req.body.imageUrl)
-        // Never let the server request (or link to) loopback, private or link-local hosts
-        if (url !== null && !isInternalHost(url)) {
-          let profileImage: string | undefined = url.href
+        let profileImage: string | undefined
+        const localImage = url !== null ? localPublicImage(url, req) : null
+        if (localImage !== null) {
+          // The shop's own public images are copied from disk instead of being requested over the network
+          profileImage = await copyLocalImage(localImage, loggedInUser.data.id)
+        } else if (url !== null && !isInternalHost(url)) { // Never let the server request (or link to) loopback, private or link-local hosts
+          profileImage = url.href
           try {
             const response = await downloadImage(url)
             if (response.statusCode !== 200 || !String(response.headers['content-type'] ?? '').toLowerCase().startsWith('image/')) {
               response.resume()
               throw new Error('url did not return an image')
             }
-            const lastSegment = url.pathname.split('.').slice(-1)[0].toLowerCase()
-            const ext = ['jpg', 'jpeg', 'png', 'svg', 'gif'].includes(lastSegment) ? lastSegment : 'jpg'
-            await pipeline(response, fs.createWriteStream(`frontend/dist/frontend/assets/public/images/uploads/${loggedInUser.data.id}.${ext}`, { flags: 'w' }))
+            const ext = imageExtension(url.pathname)
+            await pipeline(response, fs.createWriteStream(`${uploadsDir}/${loggedInUser.data.id}.${ext}`, { flags: 'w' }))
             profileImage = `/assets/public/images/uploads/${loggedInUser.data.id}.${ext}`
           } catch (error) {
             if ((error as NodeJS.ErrnoException).code === 'EBLOCKED') {
@@ -43,9 +47,13 @@ export function profileImageUrlUpload () {
               logger.warn(`Error retrieving user profile image: ${utils.getErrorMessage(error)}; using image link directly`)
             }
           }
+        } else if (url !== null) {
+          logger.warn(`Refused user profile image from an internal address: ${url.hostname}`)
+        }
+        if (profileImage !== undefined) {
           try {
             const user = await UserModel.findByPk(loggedInUser.data.id)
-            if (profileImage !== undefined) await user?.update({ profileImage })
+            await user?.update({ profileImage })
           } catch (error) {
             next(error)
             return
@@ -61,14 +69,71 @@ export function profileImageUrlUpload () {
   }
 }
 
+const publicImagesDir = path.resolve('frontend/dist/frontend/assets/public/images')
+const uploadsDir = 'frontend/dist/frontend/assets/public/images/uploads'
+const imageExtensions = ['jpg', 'jpeg', 'png', 'svg', 'gif']
+
+function imageExtension (pathname: string) {
+  const lastSegment = pathname.split('.').slice(-1)[0].toLowerCase()
+  return imageExtensions.includes(lastSegment) ? lastSegment : 'jpg'
+}
+
+// Links without a scheme (e.g. "cataas.com/cat") are taken as https:// links, then validated like any other URL
 function parseHttpUrl (value: unknown) {
   if (typeof value !== 'string') return null
+  const link = value.trim()
   try {
-    const url = new URL(value)
+    const url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(link) ? link : `https://${link}`)
     return url.protocol === 'http:' || url.protocol === 'https:' ? url : null
   } catch {
     return null
   }
+}
+
+// A link to one of the shop's own public images (e.g. http://localhost:3000/assets/public/images/uploads/default.svg)
+// resolves to the file on disk; nothing else on the server itself is ever reachable this way
+function localPublicImage (url: URL, req: Request) {
+  const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase()
+  const port = url.port !== '' ? Number(url.port) : (url.protocol === 'https:' ? 443 : 80)
+  const sameHost = url.host.toLowerCase() === String(req.get('host') ?? '').toLowerCase()
+  const loopback = host === 'localhost' || host.endsWith('.localhost') || (net.isIP(host) !== 0 && isLoopbackAddress(host))
+  if (!sameHost && !(loopback && port === req.socket.localPort)) return null
+  let pathname: string
+  try {
+    pathname = decodeURIComponent(url.pathname)
+  } catch {
+    return null
+  }
+  const prefix = '/assets/public/images/'
+  if (!pathname.startsWith(prefix)) return null
+  const file = path.resolve(publicImagesDir, pathname.slice(prefix.length))
+  if (!file.startsWith(publicImagesDir + path.sep)) return null
+  if (!imageExtensions.includes(path.extname(file).slice(1).toLowerCase())) return null
+  try {
+    return fs.statSync(file).isFile() ? file : null
+  } catch {
+    return null
+  }
+}
+
+async function copyLocalImage (file: string, userId: number) {
+  const ext = path.extname(file).slice(1).toLowerCase()
+  const target = path.resolve(uploadsDir, `${userId}.${ext}`)
+  try {
+    if (file !== target) await fs.promises.copyFile(file, target)
+    return `/assets/public/images/uploads/${userId}.${ext}`
+  } catch (error) {
+    logger.warn(`Error copying user profile image: ${utils.getErrorMessage(error)}`)
+    return undefined
+  }
+}
+
+const loopbackAddresses = new net.BlockList()
+loopbackAddresses.addSubnet('127.0.0.0', 8, 'ipv4')
+loopbackAddresses.addAddress('::1', 'ipv6')
+
+function isLoopbackAddress (address: string) {
+  return loopbackAddresses.check(address, net.isIP(address) === 6 ? 'ipv6' : 'ipv4')
 }
 
 // Loopback, private, link-local (cloud metadata), CGNAT, multicast/reserved ranges
