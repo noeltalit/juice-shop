@@ -12,6 +12,8 @@ import { createTestApp } from './helpers/setup'
 
 let app: Express
 
+const authHeader = () => ({ Authorization: `Bearer ${security.authorize({ data: { id: 1, email: 'customer@juice-sh.op' } })}` })
+
 const skipReason = process.env.ALCHEMY_API_KEY ? undefined : 'ALCHEMY_API_KEY not set'
 
 before(async () => {
@@ -88,9 +90,18 @@ void describe('/nftUnlocked', { skip: skipReason }, () => {
 })
 
 void describe('/nftMintListen', { skip: skipReason }, () => {
+  void it('GET without being logged in is rejected', async () => {
+    const res = await request(app)
+      .get('/rest/web3/nftMintListen')
+
+    assert.equal(res.status, 401)
+    assert.ok(res.headers['content-type']?.includes('application/json'))
+  })
+
   void it('GET call confirms registration of event listener', async () => {
     const res = await request(app)
       .get('/rest/web3/nftMintListen')
+      .set(authHeader())
 
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type']?.includes('application/json'))
@@ -100,9 +111,19 @@ void describe('/nftMintListen', { skip: skipReason }, () => {
 })
 
 void describe('/walletNFTVerify', { skip: skipReason }, () => {
+  void it('POST without being logged in is rejected', async () => {
+    const res = await request(app)
+      .post('/rest/web3/walletNFTVerify')
+      .send({ walletAddress: '0x1234567890123456789012345678901234567890' })
+
+    assert.equal(res.status, 401)
+    assert.ok(res.headers['content-type']?.includes('application/json'))
+  })
+
   void it('POST missing wallet address fails to solve minting challenge', async () => {
     const res = await request(app)
       .post('/rest/web3/walletNFTVerify')
+      .set(authHeader())
       .send({})
 
     assert.equal(res.status, 200)
@@ -114,6 +135,7 @@ void describe('/walletNFTVerify', { skip: skipReason }, () => {
   void it('POST invalid wallet address fails to solve minting challenge', async () => {
     const res = await request(app)
       .post('/rest/web3/walletNFTVerify')
+      .set(authHeader())
       .send({ walletAddress: 'lalalalala' })
 
     assert.equal(res.status, 200)
@@ -124,8 +146,6 @@ void describe('/walletNFTVerify', { skip: skipReason }, () => {
 })
 
 void describe('/walletExploitAddress', { skip: skipReason }, () => {
-  const authHeader = () => ({ Authorization: `Bearer ${security.authorize({ data: { id: 1, email: 'customer@juice-sh.op' } })}` })
-
   void it('POST without being logged in is rejected', async () => {
     const res = await request(app)
       .post('/rest/web3/walletExploitAddress')
