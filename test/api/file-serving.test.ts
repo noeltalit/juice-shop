@@ -116,11 +116,10 @@ void describe('/public/images/padding', () => {
     assert.equal(res.headers['content-type'], 'image/png')
   })
 
-  void it('GET tracking image for "Token Sale" page access challenge', async () => {
+  void it('GET tracking image for "Token Sale" page access challenge is forbidden', async () => {
     const res = await request(app)
       .get('/assets/public/images/padding/56px.png')
-    assert.equal(res.status, 200)
-    assert.equal(res.headers['content-type'], 'image/png')
+    assert.equal(res.status, 403)
   })
 
   void it('GET tracking image for "Privacy Policy" page access challenge', async () => {

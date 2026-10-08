@@ -278,33 +278,4 @@ export function oauthMatcher (url: UrlSegment[]): UrlMatchResult {
   return null as unknown as UrlMatchResult
 }
 
-export function tokenMatcher (url: UrlSegment[]): UrlMatchResult { // vuln-code-snippet neutral-line tokenSaleChallenge
-  if (url.length === 0) { // vuln-code-snippet neutral-line tokenSaleChallenge
-    return null as unknown as UrlMatchResult // vuln-code-snippet neutral-line tokenSaleChallenge
-  } // vuln-code-snippet neutral-line tokenSaleChallenge
- // vuln-code-snippet neutral-line tokenSaleChallenge
-  const path = url[0].toString() // vuln-code-snippet neutral-line tokenSaleChallenge
-
-  if (path.match((token1(25, 184, 174, 179, 182, 186) + (36669).toString(36).toLowerCase() + token2(13, 144, 87, 152, 139, 144, 83, 138) + (10).toString(36).toLowerCase()))) { // vuln-code-snippet vuln-line tokenSaleChallenge
-    return ({ consumed: url }) // vuln-code-snippet neutral-line tokenSaleChallenge
-  } // vuln-code-snippet neutral-line tokenSaleChallenge
- // vuln-code-snippet neutral-line tokenSaleChallenge
-  return null as unknown as UrlMatchResult // vuln-code-snippet neutral-line tokenSaleChallenge
-} // vuln-code-snippet neutral-line tokenSaleChallenge
-
-export function token1 (...args: number[]) { // vuln-code-snippet neutral-line tokenSaleChallenge
-  const L = Array.prototype.slice.call(args) // vuln-code-snippet neutral-line tokenSaleChallenge
-  const D = L.shift() // vuln-code-snippet neutral-line tokenSaleChallenge
-  return L.reverse().map(function (C, A) { // vuln-code-snippet neutral-line tokenSaleChallenge
-    return String.fromCharCode(C - D - 45 - A) // vuln-code-snippet neutral-line tokenSaleChallenge
-  }).join('') // vuln-code-snippet neutral-line tokenSaleChallenge
-} // vuln-code-snippet neutral-line tokenSaleChallenge
-
-export function token2 (...args: number[]) { // vuln-code-snippet neutral-line tokenSaleChallenge
-  const T = Array.prototype.slice.call(arguments) // vuln-code-snippet neutral-line tokenSaleChallenge
-  const M = T.shift() // vuln-code-snippet neutral-line tokenSaleChallenge
-  return T.reverse().map(function (m, H) { // vuln-code-snippet neutral-line tokenSaleChallenge
-    return String.fromCharCode(m - M - 24 - H) // vuln-code-snippet neutral-line tokenSaleChallenge
-  }).join('') // vuln-code-snippet neutral-line tokenSaleChallenge
-} // vuln-code-snippet neutral-line tokenSaleChallenge
 // vuln-code-snippet end tokenSaleChallenge
