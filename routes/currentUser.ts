@@ -28,7 +28,7 @@ export function retrieveLoggedInUser () {
 
         if (requestedFields.length > 0) {
           // When fields are specified, return only those that are publicly exposable
-          for (const field of requestedFields.filter(f => publicUserFields.includes(f))) {
+          for (const field of publicUserFields.filter(f => requestedFields.includes(f))) {
             if (user?.data[field as keyof typeof user.data] !== undefined) {
               baseUser[field] = user?.data[field as keyof typeof user.data]
             }
