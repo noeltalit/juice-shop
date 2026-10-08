@@ -32,6 +32,25 @@ export function captchas () {
   }
 }
 
+// Minimum time between two accepted feedbacks per client: nobody can get 10 past the CAPTCHA within 20 seconds,
+// while a single (human) submission is never blocked by earlier failed attempts
+const minFeedbackIntervalMs = 2250
+const lastAcceptedFeedback = new Map<string, number>()
+
+export const resetFeedbackThrottle = () => { lastAcceptedFeedback.clear() }
+
+export const throttleFeedback = () => (req: Request, res: Response, next: NextFunction) => {
+  const client = req.socket.remoteAddress ?? ''
+  const now = Date.now()
+  if (now - (lastAcceptedFeedback.get(client) ?? 0) < minFeedbackIntervalMs) {
+    res.status(429).send(res.__('Too many feedback submissions. Please try again in a few seconds.'))
+    return
+  }
+  if (lastAcceptedFeedback.size > 10000) lastAcceptedFeedback.clear()
+  lastAcceptedFeedback.set(client, now)
+  next()
+}
+
 export const verifyCaptcha = () => async (req: Request, res: Response, next: NextFunction) => {
   try {
     const captcha = await CaptchaModel.findOne({ where: { captchaId: req.body.captchaId } })

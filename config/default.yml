@@ -15,9 +15,6 @@ application:
   altcoinName: Juicycoin
   privacyContactEmail: donotreply@owasp-juice.shop
   customMetricsPrefix: juiceshop
-  feedbackRateLimit: # max. feedback submissions per client connection within windowMs
-    windowMs: 30000
-    max: 4
   chatBot:
     name: 'Juicy the Smart Assistant'
     avatar: 'JuicyChatBot.png'

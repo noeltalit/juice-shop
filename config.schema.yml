@@ -31,11 +31,6 @@ application:
     type: string
   customMetricsPrefix:
     type: string
-  feedbackRateLimit:
-    windowMs:
-      type: number
-    max:
-      type: number
   chatBot:
     name:
       type: string

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import { describe, it, before } from 'node:test'
+import { describe, it, before, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import request from 'supertest'
 import type { Express } from 'express'
@@ -12,6 +12,7 @@ import { login } from './helpers/auth'
 import { challenges } from '../../data/datacache'
 import * as security from '../../lib/insecurity'
 import * as utils from '../../lib/utils'
+import { resetFeedbackThrottle } from '../../routes/captcha'
 
 let app: Express
 const authHeader = { Authorization: 'Bearer ' + security.authorize(), 'content-type': 'application/json' }
@@ -25,6 +26,8 @@ before(async () => {
   const result = await createTestApp()
   app = result.app
 }, { timeout: 60000 })
+
+beforeEach(() => { resetFeedbackThrottle() })
 
 void describe('/api/Feedbacks', () => {
   void it('GET all feedback', async () => {
@@ -62,6 +65,19 @@ void describe('/api/Feedbacks', () => {
     assert.equal(wrong.status, 401)
     const retry = await request(app).post('/api/Feedbacks').set(jsonHeader).send({ ...feedback, captcha: solveCaptcha(captchaRes.body.captcha) })
     assert.equal(retry.status, 401)
+  })
+
+  void it('POST of 10 feedbacks within 20 seconds is throttled', async () => {
+    const statuses: number[] = []
+    for (let i = 0; i < 10; i++) {
+      const captchaRes = await request(app).get('/rest/captcha')
+      const res = await request(app).post('/api/Feedbacks').set(jsonHeader)
+        .send({ comment: 'Bot ' + i, rating: 1, captchaId: captchaRes.body.captchaId, captcha: solveCaptcha(captchaRes.body.captcha) })
+      statuses.push(res.status)
+    }
+    assert.equal(statuses[0], 201)
+    assert.ok(statuses.slice(1).every(status => status === 429))
+    assert.equal(challenges.captchaBypassChallenge.solved, false)
   })
 
   void it('POST sanitizes unsafe HTML from comment', async () => {

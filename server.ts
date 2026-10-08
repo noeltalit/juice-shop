@@ -96,7 +96,7 @@ import { addMemory, getMemories } from './routes/memory'
 import { changePassword } from './routes/changePassword'
 import { countryMapping } from './routes/countryMapping'
 import { retrieveAppVersion } from './routes/appVersion'
-import { captchas, verifyCaptcha } from './routes/captcha'
+import { captchas, verifyCaptcha, throttleFeedback } from './routes/captcha'
 import * as restoreProgress from './routes/restoreProgress'
 import { checkKeys, nftUnlocked } from './routes/checkKeys'
 import { retrieveLoggedInUser } from './routes/currentUser'
@@ -394,15 +394,10 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   app.use('/rest/basket/:id/order', security.isAuthorized())
   /* Challenge evaluation before finale takes over */ // vuln-code-snippet hide-start
   app.post('/api/Feedbacks', verify.forgedFeedbackChallenge())
-  /* Throttle feedback per client connection (not the spoofable X-Forwarded-For) against automated submission */
-  app.post('/api/Feedbacks', rateLimit({
-    windowMs: config.get<number>('application.feedbackRateLimit.windowMs'),
-    max: config.get<number>('application.feedbackRateLimit.max'),
-    keyGenerator: ({ socket }: Request) => socket.remoteAddress ?? '',
-    validate: false
-  }))
   /* Captcha verification before finale takes over */
   app.post('/api/Feedbacks', utils.asyncHandler(verifyCaptcha()))
+  /* Throttle accepted feedback per client connection (not the spoofable X-Forwarded-For) against automated submission */
+  app.post('/api/Feedbacks', throttleFeedback())
   /* Captcha Bypass challenge verification */
   app.post('/api/Feedbacks', verify.captchaBypassChallenge())
   /* User registration challenge verifications before finale takes over */

@@ -20,10 +20,6 @@ export interface ApplicationConfig {
   altcoinName: string
   privacyContactEmail: string
   customMetricsPrefix: string
-  feedbackRateLimit: {
-    windowMs: number
-    max: number
-  }
   chatBot: {
     name: string
     avatar: string
