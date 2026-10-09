@@ -121,7 +121,8 @@ void describe('/profile/image/url', () => {
         .set('Authorization', `Bearer ${token}`)
         .field('imageUrl', imageUrl)
         .redirects(0)
-      assert.equal(res.status, 302)
+      assert.equal(res.status, 400)
+      assert.equal(res.body.status, 'error')
     }
 
     const user = await UserModel.findOne({ where: { email: `jim@${config.get<string>('application.domain')}` } })

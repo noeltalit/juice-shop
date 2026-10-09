@@ -32,8 +32,10 @@ export function profileImageUrlUpload () {
           // The shop's own public images are copied from disk instead of being requested over the network
           profileImage = await copyLocalImage(localImage, loggedInUser.data.id)
         } else if (url === null || isInternalHost(url)) {
-          // Never request (or link to) anything but plain public http(s) image links
+          // Never request (or link to) anything but plain public http(s) image links, and say so
           logger.warn(`Refused user profile image URL: ${String(req.body.imageUrl).substring(0, 200)}`)
+          refuseImageUrl(res)
+          return
         } else if (!isAllowListedHost(url)) {
           // OWASP SSRF Prevention (case 1): the server only ever talks to identified, trusted image hosts.
           // Any other public link is kept as a plain link that the user's browser loads, never fetched by the server.
@@ -44,8 +46,9 @@ export function profileImageUrlUpload () {
             profileImage = await storeDownloadedImage(url, loggedInUser.data.id)
           } catch (error) {
             if ((error as NodeJS.ErrnoException).code === 'EBLOCKED') {
-              profileImage = undefined
               logger.warn(`Refused user profile image from an internal address: ${url.hostname}`)
+              refuseImageUrl(res)
+              return
             } else {
               logger.warn(`Error retrieving user profile image: ${utils.getErrorMessage(error)}; using image link directly`)
             }
@@ -68,6 +71,11 @@ export function profileImageUrlUpload () {
     res.location(process.env.BASE_PATH + '/profile')
     res.redirect(process.env.BASE_PATH + '/profile')
   }
+}
+
+// A refused image URL is answered explicitly instead of silently redirecting as if it had been accepted
+function refuseImageUrl (res: Response) {
+  res.status(400).json({ status: 'error', message: 'The profile image URL has to point to a public http(s) image.' })
 }
 
 // Trusted image hosts (exact host or a subdomain of it), e.g. application.profileImageUrlAllowlist: [cataas.com]
