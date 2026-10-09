@@ -204,6 +204,18 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
     next()
   })
 
+  /* Unreleased and developer-only pages are not part of the public shop: refuse them (and their tracking
+     pixels) before any other handler sees the request, whether the name is in the path or in the query string */
+  const removedPages = /^\/(web3-sandbox|tokensale-ico-ea)(\/.*)?$/i
+  const removedPagePixels = /\/(11|56)px\.png$/i
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (removedPages.test(req.path) || removedPagePixels.test(req.path) || removedPagePixels.test(req.url) || removedPagePixels.test(req.originalUrl)) {
+      res.status(403).json({ status: 'error', message: 'This page is not available.' })
+      return
+    }
+    next()
+  })
+
   /* Increase request counter metric for every request */
   app.use(metrics.observeRequestMetricsMiddleware())
 
@@ -226,11 +238,6 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
 
   /* Check for any URLs having been called that would be expected for challenge solving without cheating */
   app.use(antiCheat.checkForPreSolveInteractions())
-
-  /* Unreleased and developer-only pages are not part of the public shop */
-  app.all([/\/(11|56)px\.png$/, /^\/web3-sandbox(\/.*)?$/i, /^\/tokensale-ico-ea(\/.*)?$/i], (req: Request, res: Response) => {
-    res.status(403).json({ status: 'error', message: 'This page is not available.' })
-  })
 
   /* Checks for challenges solved by retrieving a file implicitly or explicitly */
   app.use('/assets/public/images/padding', verify.accessControlChallenges())
