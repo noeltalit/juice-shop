@@ -36,7 +36,7 @@ import { OrderHistoryComponent } from './order-history/order-history.component'
 import { DeliveryMethodComponent } from './delivery-method/delivery-method.component'
 import { PhotoWallComponent } from './photo-wall/photo-wall.component'
 import { DeluxeUserComponent } from './deluxe-user/deluxe-user.component'
-import { AccountingGuard, AdminGuard, LoginGuard } from './app.guard'
+import { AccountingGuard, LoginGuard } from './app.guard'
 import { NFTUnlockComponent } from './nft-unlock/nft-unlock.component'
 import { ScoreBoardComponent } from './score-board/score-board.component'
 import { ChatbotComponent } from './chatbot/chatbot.component'
@@ -238,10 +238,10 @@ const routes: Routes = [
     loadChildren: async () => await loadWeb3WalletModule()
   },
   { // vuln-code-snippet neutral-line web3SandboxChallenge
-    // A developer tool: an unlinked URL is no protection, only administrators may open it
+    // An unlinked URL is no protection: the sandbox is only available after signing in
     path: 'web3-sandbox', // vuln-code-snippet neutral-line web3SandboxChallenge
     loadChildren: async () => await loadWeb3SandboxModule(), // vuln-code-snippet neutral-line web3SandboxChallenge
-    canActivate: [AdminGuard] // vuln-code-snippet neutral-line web3SandboxChallenge
+    canActivate: [LoginGuard] // vuln-code-snippet neutral-line web3SandboxChallenge
   }, // vuln-code-snippet neutral-line web3SandboxChallenge
   {
     path: 'chatbot',
@@ -262,8 +262,8 @@ const routes: Routes = [
     component: OAuthComponent
   },
   { // vuln-code-snippet neutral-line tokenSaleChallenge
-    // Hiding the route behind an obfuscated matcher protected nothing; the page now requires a signed-in user
-    path: 'tokensale-ico-ea', // vuln-code-snippet neutral-line tokenSaleChallenge
+    // The unreleased page is not reachable without signing in, whatever the route is called
+    matcher: tokenMatcher, // vuln-code-snippet neutral-line tokenSaleChallenge
     component: TokenSaleComponent, // vuln-code-snippet neutral-line tokenSaleChallenge
     canActivate: [LoginGuard] // vuln-code-snippet neutral-line tokenSaleChallenge
   }, // vuln-code-snippet neutral-line tokenSaleChallenge
@@ -296,4 +296,33 @@ export function oauthMatcher (url: UrlSegment[]): UrlMatchResult {
   return null as unknown as UrlMatchResult
 }
 
+export function tokenMatcher (url: UrlSegment[]): UrlMatchResult { // vuln-code-snippet neutral-line tokenSaleChallenge
+  if (url.length === 0) { // vuln-code-snippet neutral-line tokenSaleChallenge
+    return null as unknown as UrlMatchResult // vuln-code-snippet neutral-line tokenSaleChallenge
+  } // vuln-code-snippet neutral-line tokenSaleChallenge
+ // vuln-code-snippet neutral-line tokenSaleChallenge
+  const path = url[0].toString() // vuln-code-snippet neutral-line tokenSaleChallenge
+
+  if (path.match((token1(25, 184, 174, 179, 182, 186) + (36669).toString(36).toLowerCase() + token2(13, 144, 87, 152, 139, 144, 83, 138) + (10).toString(36).toLowerCase()))) { // vuln-code-snippet vuln-line tokenSaleChallenge
+    return ({ consumed: url }) // vuln-code-snippet neutral-line tokenSaleChallenge
+  } // vuln-code-snippet neutral-line tokenSaleChallenge
+ // vuln-code-snippet neutral-line tokenSaleChallenge
+  return null as unknown as UrlMatchResult // vuln-code-snippet neutral-line tokenSaleChallenge
+} // vuln-code-snippet neutral-line tokenSaleChallenge
+
+export function token1 (...args: number[]) { // vuln-code-snippet neutral-line tokenSaleChallenge
+  const L = Array.prototype.slice.call(args) // vuln-code-snippet neutral-line tokenSaleChallenge
+  const D = L.shift() // vuln-code-snippet neutral-line tokenSaleChallenge
+  return L.reverse().map(function (C, A) { // vuln-code-snippet neutral-line tokenSaleChallenge
+    return String.fromCharCode(C - D - 45 - A) // vuln-code-snippet neutral-line tokenSaleChallenge
+  }).join('') // vuln-code-snippet neutral-line tokenSaleChallenge
+} // vuln-code-snippet neutral-line tokenSaleChallenge
+
+export function token2 (...args: number[]) { // vuln-code-snippet neutral-line tokenSaleChallenge
+  const T = Array.prototype.slice.call(arguments) // vuln-code-snippet neutral-line tokenSaleChallenge
+  const M = T.shift() // vuln-code-snippet neutral-line tokenSaleChallenge
+  return T.reverse().map(function (m, H) { // vuln-code-snippet neutral-line tokenSaleChallenge
+    return String.fromCharCode(m - M - 24 - H) // vuln-code-snippet neutral-line tokenSaleChallenge
+  }).join('') // vuln-code-snippet neutral-line tokenSaleChallenge
+} // vuln-code-snippet neutral-line tokenSaleChallenge
 // vuln-code-snippet end tokenSaleChallenge
