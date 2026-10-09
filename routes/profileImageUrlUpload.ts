@@ -31,7 +31,7 @@ export function profileImageUrlUpload () {
         if (localImage !== null) {
           // The shop's own public images are copied from disk instead of being requested over the network
           profileImage = await copyLocalImage(localImage, loggedInUser.data.id)
-        } else if (url === null || isInternalHost(url)) {
+        } else if (url === null || isInternalHost(url) || await resolvesToInternalAddress(url)) {
           // Never request (or link to) anything but plain public http(s) image links, and say so
           logger.warn(`Refused user profile image URL: ${String(req.body.imageUrl).substring(0, 200)}`)
           refuseImageUrl(res)
@@ -196,6 +196,19 @@ for (const [network, prefix] of [['::', 96], ['64:ff9b::', 96], ['fc00::', 7], [
 function isBlockedAddress (address: string) {
   const family = net.isIP(address)
   return family === 0 || blockedAddresses.check(address, family === 6 ? 'ipv6' : 'ipv4')
+}
+
+// Decide on the addresses a name really points to: a host that can't be resolved, or that resolves to any
+// internal address (e.g. a service name inside the server's own network), is refused before anything else
+async function resolvesToInternalAddress (url: URL) {
+  const host = url.hostname.replace(/^\[|\]$/g, '')
+  if (net.isIP(host) !== 0) return isBlockedAddress(host)
+  try {
+    const addresses = await dns.promises.lookup(host, { all: true, verbatim: true })
+    return addresses.length === 0 || addresses.some(({ address }) => isBlockedAddress(address))
+  } catch {
+    return true
+  }
 }
 
 function isInternalHost (url: URL) {

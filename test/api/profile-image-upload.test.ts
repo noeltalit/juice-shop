@@ -87,7 +87,7 @@ void describe('/profile/image/url', () => {
     assert.equal(res.status, 302)
   })
 
-  void it('POST profile image URL redirects even for invalid image URL', async () => {
+  void it('POST profile image URL of a host that cannot be resolved is refused', async () => {
     const { token } = await login(app, {
       email: `jim@${config.get<string>('application.domain')}`,
       password: 'ncc-1701'
@@ -99,7 +99,8 @@ void describe('/profile/image/url', () => {
       .field('imageUrl', 'https://notanimage.here/100/100')
       .redirects(0)
 
-    assert.equal(res.status, 302)
+    assert.equal(res.status, 400)
+    assert.equal(res.body.status, 'error')
   })
 
   void it('POST profile image URL never lets the server request internal resources', async () => {
@@ -139,12 +140,12 @@ void describe('/profile/image/url', () => {
     const res = await request(app)
       .post('/profile/image/url')
       .set('Cookie', `token=${token}`)
-      .field('imageUrl', 'https://images.example.org/avatar.png')
+      .field('imageUrl', 'https://example.com/avatar.png')
       .redirects(0)
 
     assert.equal(res.status, 302)
     const user = await UserModel.findOne({ where: { email: `jim@${config.get<string>('application.domain')}` } })
-    assert.equal(user?.profileImage, 'https://images.example.org/avatar.png')
+    assert.equal(user?.profileImage, 'https://example.com/avatar.png')
   })
 
   void it('POST profile image URL forbidden for anonymous user', { skip: 'FIXME runs into "socket hang up"' }, async () => {
