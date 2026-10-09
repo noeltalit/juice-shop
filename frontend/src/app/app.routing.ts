@@ -258,13 +258,8 @@ const routes: Routes = [
     component: ErrorPageComponent
   },
   {
-    path: '',
-    pathMatch: 'full',
-    component: SearchResultComponent
-  },
-  { // deny by default: unknown/unpublished routes are never rendered
     path: '**',
-    redirectTo: '403'
+    component: SearchResultComponent
   }
 ]
 // vuln-code-snippet end adminSectionChallenge scoreBoardChallenge web3SandboxChallenge
